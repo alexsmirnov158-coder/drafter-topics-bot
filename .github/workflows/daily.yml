@@ -1,0 +1,29 @@
+name: Daily topics
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Send topics
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python3 send_topics.py
+      - name: Commit last-topics.txt
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.email "bot@drafter.local"
+            git config user.name  "drafter-topics-bot"
+            git add last-topics.txt
+            git commit -m "auto: $(date -u +%Y-%m-%d) topics"
+            git push
+          fi
