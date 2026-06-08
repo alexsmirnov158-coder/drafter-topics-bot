@@ -1,0 +1,31 @@
+name: Poll loop
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+concurrency:
+  group: poll
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -q -r requirements.txt
+      - env:
+          BOT_TOKEN:     ${{ secrets.BOT_TOKEN }}
+          CHAT_ID:       ${{ secrets.CHAT_ID }}
+          ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_KEY }}
+          HF_TOKEN:      ${{ secrets.HF_TOKEN }}
+          GH_PAT:        ${{ secrets.GH_PAT }}
+        run: python3 poll.py
+      - run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.email "bot@drafter.local"
+            git config user.name  "drafter-topics-bot"
+            git add state.json last-topics.txt
+            git commit -m "auto: state $(date -u +%Y-%m-%dT%H:%M)"
+            git push
+          fi
