@@ -321,7 +321,10 @@ def main():
         try:
             draft_post(state)
         except Exception as e:
-            tg_send_message(CHAT_ID, f"⚠️ Ошибка при подготовке поста: {type(e).__name__}: {e}")
+            import traceback
+            tb = traceback.format_exc()
+            print(tb, file=sys.stderr)
+            tg_send_message(CHAT_ID, f"⚠️ Ошибка при подготовке поста: {type(e).__name__}: {e}\n\n```\n{tb[-2000:]}\n```")
             state["phase"] = "waiting_topic"
 
     # 4. Publishing
@@ -329,7 +332,10 @@ def main():
         try:
             publish_post(state)
         except Exception as e:
-            tg_send_message(CHAT_ID, f"⚠️ Ошибка при публикации: {type(e).__name__}: {e}")
+            import traceback
+            tb = traceback.format_exc()
+            print(tb, file=sys.stderr)
+            tg_send_message(CHAT_ID, f"⚠️ Ошибка при публикации: {type(e).__name__}: {e}\n\n```\n{tb[-2000:]}\n```")
             state["phase"] = "awaiting_approval"
 
     save_state(state)
