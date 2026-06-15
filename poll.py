@@ -112,14 +112,33 @@ def call_claude(system_prompt, user_prompt, model="claude-sonnet-4-6"):
 
 def call_huggingface_image(prompt, out_path):
     from huggingface_hub import InferenceClient
+    from huggingface_hub.errors import HfHubHTTPError
+    import time
     client = InferenceClient(api_key=HF_TOKEN)
-    image = client.text_to_image(
-        prompt=prompt,
-        model="black-forest-labs/FLUX.1-schnell",
-        width=1280,
-        height=720,
-    )
-    image.save(out_path)
+    # Retry on rate-limit, then fallback to other models
+    last_exc = None
+    for model, delay in [
+        ("black-forest-labs/FLUX.1-schnell", 0),
+        ("black-forest-labs/FLUX.1-schnell", 30),
+        ("black-forest-labs/FLUX.1-dev", 0),
+        ("stabilityai/stable-diffusion-xl-base-1.0", 0),
+    ]:
+        if delay:
+            time.sleep(delay)
+        try:
+            image = client.text_to_image(
+                prompt=prompt, model=model, width=1280, height=720,
+            )
+            image.save(out_path)
+            print(f"cover via {model}")
+            return
+        except HfHubHTTPError as e:
+            last_exc = e
+            msg = str(e)
+            if "429" in msg or "503" in msg or "rate limit" in msg.lower():
+                continue
+            raise
+    raise last_exc
 
 
 def upload_cover_to_repo(local_path, dest_name):
